@@ -32,14 +32,16 @@ jobs:
         run: |
           curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh \
           | sudo sh -s -- -b /usr/local/bin
+
       - name: Trivy FS Scan
         run: trivy fs --format table -o trivy-fs-report.html .
+
       - name: Upload Trivy FS report
         uses: actions/upload-artifact@v4
         with:
           name: trivy-fs-report
           path: trivy-fs-report.html
-          
+
       # --- Docker build & scan ---
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v3
@@ -51,7 +53,7 @@ jobs:
         run: docker build -t maestrodomb/boardgame:latest .
 
       - name: Trivy Image Scan
-        run: trivy image --format table -o trivy-image-report.html AbhimanyuDomb/boardgame:latest
+        run: trivy image --format table -o trivy-image-report.html maestrodomb/boardgame:latest
 
       - name: Upload Trivy Image report
         uses: actions/upload-artifact@v4
@@ -66,13 +68,15 @@ jobs:
           password: ${{ secrets.DOCKERHUB_TOKEN }}
 
       - name: Push Docker Image
-        run: docker push Maestrodomb/boardgame:latest
+        run: docker push maestrodomb/boardgame:latest
 
       # --- Deploy ---
-     - name: Kubectl Action
-       uses: tale/kubectl-action@v1
-       with:
-         base64-kube-config: ${{ secrets.KUBE_CONFIG }}
-     - run: |
-         kubectl apply -f deployment-service.yaml -n webapps
-         kubectl get svc -n webapps
+      - name: Kubectl Action
+        uses: tale/kubectl-action@v1
+        with:
+          base64-kube-config: ${{ secrets.KUBE_CONFIG }}
+
+      - name: Apply manifests
+        run: |
+          kubectl apply -f deployment-service.yaml -n webapps
+          kubectl get svc -n webapps
