@@ -48,7 +48,7 @@ jobs:
         uses: docker/setup-buildx-action@v3
 
       - name: Build Docker Image
-        run: docker build -t AbhimanyuDomb/boardgame:latest .
+        run: docker build -t maestrodomb/boardgame:latest .
 
       - name: Trivy Image Scan
         run: trivy image --format table -o trivy-image-report.html AbhimanyuDomb/boardgame:latest
@@ -69,16 +69,10 @@ jobs:
         run: docker push Maestrodomb/boardgame:latest
 
       # --- Deploy ---
-      - name: Set up kubectl
-        uses: aws/setup-kubectl@v4
-        with:
-          version: latest
-
-      - name: Configure kubeconfig
-        run: |
-          echo "${{ secrets.KUBE_CONFIG }}" | base64 -d > $HOME/.kube/config
-
-      - name: Apply manifests
-        run: |
-          kubectl apply -f deployment-service.yaml -n webapps
-          kubectl get svc -n webapps
+     - name: Kubectl Action
+       uses: tale/kubectl-action@v1
+       with:
+         base64-kube-config: ${{ secrets.KUBE_CONFIG }}
+     - run: |
+         kubectl apply -f deployment-service.yaml -n webapps
+         kubectl get svc -n webapps
