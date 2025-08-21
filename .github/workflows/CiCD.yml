@@ -48,18 +48,30 @@ jobs:
           name: trivy-fs-report
           path: trivy-fs-report.html
 
+     
+     # --- Docker install (self-hosted Ubuntu) ---
+      - name: Install Docker Engine
+        run: |
+          set -e
+          sudo apt-get update
+          sudo apt-get install -y ca-certificates curl gnupg
+          sudo install -m 0755 -d /etc/apt/keyrings
+          curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+          echo \
+            "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu \
+            $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | \
+            sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+          sudo apt-get update
+          sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+          sudo systemctl enable --now docker
+          sudo docker version
+
       # --- Docker build & scan ---
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
       - name: Build Docker Image
-        run: docker build -t maestrodomb/boardgame:latest .
+        run: sudo docker build -t maestrodomb/boardgame:latest .
 
       - name: Trivy Image Scan
-        run: trivy image --format table -o trivy-image-report.html maestrodomb/boardgame:latest
+        run: sudo trivy image --format table -o trivy-image-report.html maestrodomb/boardgame:latest
 
       - name: Upload Trivy Image report
         uses: actions/upload-artifact@v4
@@ -68,13 +80,10 @@ jobs:
           path: trivy-image-report.html
 
       - name: Login to Docker Hub
-        uses: docker/login-action@v3
-        with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
+        run: echo "${{ secrets.DOCKERHUB_TOKEN }}" | sudo docker login -u "${{ secrets.DOCKERHUB_USERNAME }}" --password-stdin
 
       - name: Push Docker Image
-        run: docker push maestrodomb/boardgame:latest
+        run: sudo docker push maestrodomb/boardgame:latest
 
       # --- Deploy ---
       - name: Kubectl Action
